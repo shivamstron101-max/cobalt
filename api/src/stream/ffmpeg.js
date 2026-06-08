@@ -1,6 +1,7 @@
 import ffmpeg from "ffmpeg-static";
 import { spawn } from "child_process";
 import { create as contentDisposition } from "content-disposition-header";
+import mime from "mime";
 
 import { env } from "../config.js";
 import { destroyInternalStream } from "./manage.js";
@@ -65,7 +66,7 @@ const render = async (res, streamInfo, ffargs, estimateMultiplier) => {
 
     try {
         const args = [
-            '-loglevel', '-8',
+            '-loglevel', 'warning',
             ...ffargs,
         ];
 
@@ -81,6 +82,8 @@ const render = async (res, streamInfo, ffargs, estimateMultiplier) => {
 
         res.setHeader('Connection', 'keep-alive');
         res.setHeader('Content-Disposition', contentDisposition(streamInfo.filename));
+        res.setHeader('Accept-Ranges', 'none');
+        res.setHeader('Content-Type', mime.getType(streamInfo.filename) || 'application/octet-stream');
 
         res.setHeader(
             'Estimated-Content-Length',

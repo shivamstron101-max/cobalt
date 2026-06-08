@@ -95,6 +95,7 @@ async function handleChunkedStream(streamInfo, res) {
             const headerValue = req.headers.get(headerName);
             if (headerValue) res.setHeader(headerName, headerValue);
         }
+        res.setHeader('Accept-Ranges', 'none');
 
         pipe(stream, res, cleanup);
     } catch (e) {
