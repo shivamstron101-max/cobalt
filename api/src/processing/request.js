@@ -23,7 +23,7 @@ export function createResponse(responseType, responseData) {
             response = {};
 
         if (responseType === "error") {
-            status = 400;
+            status = 200;
         }
 
         switch (responseType) {
