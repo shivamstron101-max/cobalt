@@ -37,7 +37,8 @@ export default async function (streamInfo, res) {
         }
 
         pipe(stream, res, shutdown);
-    } catch {
+    } catch (e) {
+        console.error("PROXY ERROR:", e);
         shutdown();
     }
 }

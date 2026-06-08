@@ -97,7 +97,8 @@ async function handleChunkedStream(streamInfo, res) {
         }
 
         pipe(stream, res, cleanup);
-    } catch {
+    } catch (e) {
+        console.error("INTERNAL CHUNK ERROR:", e);
         cleanup();
     }
 }
@@ -137,7 +138,8 @@ async function handleGenericStream(streamInfo, res) {
         } else {
             pipe(fileResponse.body, res, cleanup);
         }
-    } catch {
+    } catch (e) {
+        console.error("INTERNAL STREAM ERROR:", e);
         closeRequest(streamInfo.controller);
         cleanup();
     }
