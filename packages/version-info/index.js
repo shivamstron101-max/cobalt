@@ -18,65 +18,60 @@ const findFile = (file) => {
 const root = findFile('.git');
 const pack = findFile('package.json');
 
-const readGit = (filename) => {
-    if (!root) {
-        throw 'no git repository root found';
+const readGit = async (filename) => {
+    if (!root) return null;
+    try {
+        return await readFile(join(root, filename), 'utf8');
+    } catch {
+        return null;
     }
-
-    return readFile(join(root, filename), 'utf8');
 }
 
 export const getCommit = async () => {
-    return (await readGit('.git/logs/HEAD'))
-            ?.split('\n')
-            ?.filter(String)
-            ?.pop()
-            ?.split(' ')[1];
+    if (process.env.RAILWAY_GIT_COMMIT_SHA) return process.env.RAILWAY_GIT_COMMIT_SHA;
+    const log = await readGit('.git/logs/HEAD');
+    return log?.split('\n')?.filter(String)?.pop()?.split(' ')[1] || 'unknown';
 }
 
 export const getBranch = async () => {
-    if (process.env.CF_PAGES_BRANCH) {
-        return process.env.CF_PAGES_BRANCH;
-    }
+    if (process.env.RAILWAY_GIT_BRANCH) return process.env.RAILWAY_GIT_BRANCH;
+    if (process.env.CF_PAGES_BRANCH) return process.env.CF_PAGES_BRANCH;
+    if (process.env.WORKERS_CI_BRANCH) return process.env.WORKERS_CI_BRANCH;
 
-    if (process.env.WORKERS_CI_BRANCH) {
-        return process.env.WORKERS_CI_BRANCH;
-    }
-
-    return (await readGit('.git/HEAD'))
-            ?.replace(/^ref: refs\/heads\//, '')
-            ?.trim();
+    const head = await readGit('.git/HEAD');
+    return head?.replace(/^ref: refs\/heads\//, '')?.trim() || 'unknown';
 }
 
 export const getRemote = async () => {
-    let remote = (await readGit('.git/config'))
-                    ?.split('\n')
-                    ?.find(line => line.includes('url = '))
-                    ?.split('url = ')[1];
+    if (process.env.RAILWAY_GIT_REPO_OWNER && process.env.RAILWAY_GIT_REPO_NAME) {
+        return `${process.env.RAILWAY_GIT_REPO_OWNER}/${process.env.RAILWAY_GIT_REPO_NAME}`;
+    }
+
+    let config = await readGit('.git/config');
+    let remote = config?.split('\n')?.find(line => line.includes('url = '))?.split('url = ')[1];
 
     if (remote?.startsWith('git@')) {
         remote = remote.split(':')[1];
     } else if (remote?.startsWith('http')) {
-        remote = new URL(remote).pathname.substring(1);
+        try {
+            remote = new URL(remote).pathname.substring(1);
+        } catch { }
     }
 
     remote = remote?.replace(/\.git$/, '');
 
-    if (!remote) {
-        throw 'could not parse remote';
-    }
-
-    return remote;
+    return remote || 'unknown';
 }
 
 export const getVersion = async () => {
-    if (!pack) {
-        throw 'no package root found';
+    if (!pack) return 'unknown';
+
+    try {
+        const { version } = JSON.parse(
+            await readFile(join(pack, 'package.json'), 'utf8')
+        );
+        return version;
+    } catch {
+        return 'unknown';
     }
-
-    const { version } = JSON.parse(
-        await readFile(join(pack, 'package.json'), 'utf8')
-    );
-
-    return version;
 }
